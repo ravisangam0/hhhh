@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SD Digital Hub — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet"/>
+<style>
+:root{--primary:#0A2463;--primary-l:#1a3a9e;--gold:#D4AF37;--gold-l:#e8c84a;--bg:#f4f6fb;--surface:#ffffff;--surface2:#f8f9fc;--border:#e5e9f2;--text:#111827;--text2:#6b7280;--text3:#9ca3af;--green:#16a34a;--red:#dc2626;--yellow:#d97706;--blue:#2563eb;--shadow:0 1px 3px rgba(10,36,99,.08),0 4px 16px rgba(10,36,99,.06);--shadow-lg:0 8px 32px rgba(10,36,99,.14);--radius:12px;--radius-sm:8px;--radius-lg:16px}
+[data-theme="dark"]{--bg:#0d1117;--surface:#161b22;--surface2:#1c2230;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#484f58}
+*{box-sizing:border-box;margin:0;padding:0;transition:background .15s,border-color .15s,color .15s}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit}
+#app{display:flex;min-height:100vh}
+#sidebar{width:240px;background:var(--primary);min-height:100vh;display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:transform .25s}
+#main{flex:1;margin-left:240px;min-height:100vh;display:flex;flex-direction:column}
+#topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;padding:0 24px;gap:12px}
+[data-theme="dark"] #topbar{background:rgba(22,27,34,.85)}
+#content{flex:1;padding:24px;max-width:1200px;width:100%}
+.logo-area{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:12px}
+.logo-box{width:38px;height:38px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:700;color:var(--primary);font-size:14px;flex-shrink:0}
+.logo-text{color:#fff}
+.logo-text strong{display:block;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;line-height:1.2}
+.logo-text span{font-size:10px;opacity:.4;text-transform:uppercase;letter-spacing:.08em}
+nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);color:rgba(255,255,255,.65);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-item.active{background:var(--gold);color:var(--primary)!important;font-weight:600;box-shadow:0 2px 8px rgba(212,175,55,.3)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:rgba(255,255,255,.25);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 7px;display:none}
+.nav-item.active .nav-badge{background:rgba(10,36,99,.2);color:var(--primary)}
+.sidebar-footer{padding:10px 10px 16px;border-top:1px solid rgba(255,255,255,.1)}
+.user-email{padding:8px 12px;font-size:11px;color:rgba(255,255,255,.3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hamburger{display:none;background:none;border:none;padding:6px;border-radius:var(--radius-sm);color:var(--text)}
+#hamburger svg{width:20px;height:20px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topbar-date{font-size:12px;color:var(--text3)}
+#btn-dark{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+#btn-dark:hover{border-color:var(--primary);color:var(--primary)}
+#btn-dark svg{width:14px;height:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-header h3{font-size:14px;font-weight:600;color:var(--text)}
+.card-body{padding:20px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow)}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-icon svg{width:20px;height:20px}
+.stat-icon.blue{background:#eff6ff;color:#2563eb}
+.stat-icon.gold{background:#fffbeb;color:#d97706}
+.stat-icon.green{background:#f0fdf4;color:#16a34a}
+.stat-icon.purple{background:#faf5ff;color:#9333ea}
+.stat-icon.rose{background:#fff1f2;color:#e11d48}
+[data-theme="dark"] .stat-icon.blue{background:#1e3a5f;color:#60a5fa}
+[data-theme="dark"] .stat-icon.gold{background:#3d2e00;color:#fbbf24}
+[data-theme="dark"] .stat-icon.green{background:#052e16;color:#4ade80}
+[data-theme="dark"] .stat-icon.purple{background:#2e1065;color:#c084fc}
+[data-theme="dark"] .stat-icon.rose{background:#3b0619;color:#fb7185}
+.stat-value{font-size:26px;font-weight:800;color:var(--text);line-height:1}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.stat-sub{font-size:11px;color:var(--gold);margin-top:2px;font-weight:600}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.page-header h1{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--primary)}
+[data-theme="dark"] .page-header h1{color:#e6edf3}
+.page-header p{font-size:13px;color:var(--text2);margin-top:2px}
+.page-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;border:none;transition:all .15s;cursor:pointer;white-space:nowrap}
+.btn svg{width:15px;height:15px}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(10,36,99,.2)}
+.btn-primary:hover{background:var(--primary-l)}
+.btn-gold{background:var(--gold);color:var(--primary);box-shadow:0 2px 8px rgba(212,175,55,.3)}
+.btn-gold:hover{background:var(--gold-l)}
+.btn-outline{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--gold);color:var(--primary)}
+.btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.btn-danger:hover{background:#dc2626;color:#fff}
+.btn-success{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.btn-success:hover{background:#16a34a;color:#fff}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{padding:7px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
+.btn-icon:hover{border-color:var(--primary);color:var(--primary)}
+.btn-icon svg{width:15px;height:15px}
+.btn-icon.danger:hover{border-color:#dc2626;color:#dc2626}
+.btn-icon.view{border-color:var(--gold);color:var(--gold)}
+.btn-icon.view:hover{background:var(--gold);color:var(--primary)}
+button:disabled{opacity:.5;cursor:not-allowed}
+[data-theme="dark"] .btn-danger{background:#3b0000;color:#f87171;border-color:#7f1d1d}
+[data-theme="dark"] .btn-danger:hover{background:#dc2626;color:#fff}
+.export-wrap{position:relative}
+.export-dropdown{position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);min-width:160px;z-index:200;overflow:hidden;display:none}
+.export-dropdown.open{display:block}
+.export-dropdown-header{padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);border-bottom:1px solid var(--border)}
+.export-option{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;background:none;border:none;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.export-option:hover{background:var(--surface2)}
+.export-option svg{width:15px;height:15px}
+.export-option.csv svg{color:#16a34a}
+.export-option.json svg{color:#2563eb}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px}
+.form-control{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:14px;outline:none;transition:border .15s,box-shadow .15s}
+.form-control:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(10,36,99,.08)}
+textarea.form-control{resize:vertical;min-height:100px}
+select.form-control{cursor:pointer}
+.slug-group{display:flex}
+.slug-prefix{padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-right:none;border-radius:var(--radius-sm) 0 0 var(--radius-sm);font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.slug-group .form-control{border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-family:'JetBrains Mono',monospace}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--border)}
+thead th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--surface2)}
+tbody tr:last-child{border-bottom:none}
+td{padding:12px 16px;font-size:13px;color:var(--text)}
+.td-sub{font-size:11px;color:var(--text3);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.td-actions{display:flex;gap:6px;align-items:center}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;gap:4px}
+.badge-green{background:#dcfce7;color:#15803d}
+.badge-gray{background:#f1f5f9;color:#64748b}
+.badge-gold{background:#fffbeb;color:#b45309;border:1px solid #fde68a}
+.badge-blue{background:#eff6ff;color:#1d4ed8}
+.badge-red{background:#fee2e2;color:#b91c1c}
+.badge-yellow{background:#fef9c3;color:#92400e}
+.badge-purple{background:#faf5ff;color:#7e22ce}
+[data-theme="dark"] .badge-green{background:#052e16;color:#4ade80}
+[data-theme="dark"] .badge-gray{background:#1c2230;color:#8b949e}
+[data-theme="dark"] .badge-gold{background:#3d2e00;color:#fbbf24;border-color:#78350f}
+[data-theme="dark"] .badge-blue{background:#1e3a5f;color:#60a5fa}
+[data-theme="dark"] .badge-red{background:#3b0000;color:#f87171}
+[data-theme="dark"] .badge-yellow{background:#3b2800;color:#fbbf24}
+.search-wrap{position:relative;display:inline-block}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text3);pointer-events:none}
+.search-input{padding:8px 14px 8px 32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none;width:240px}
+.search-input:focus{border-color:var(--primary)}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;background:var(--surface);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.item-row{display:flex;align-items:flex-start;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border);transition:background .1s}
+.item-row:hover{background:var(--surface2)}
+.item-row:last-child{border-bottom:none}
+.item-row.unread{border-left:3px solid var(--gold);padding-left:17px;background:rgba(212,175,55,.03)}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;margin-top:2px}
+.avatar.blue{background:#eff6ff;color:#2563eb}
+.avatar.purple{background:#faf5ff;color:#9333ea}
+[data-theme="dark"] .avatar.blue{background:#1e3a5f;color:#60a5fa}
+[data-theme="dark"] .avatar.purple{background:#2e1065;color:#c084fc}
+.item-info{flex:1;min-width:0}
+.item-name{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.item-meta{font-size:12px;color:var(--text2);margin-top:3px}
+.item-msg{font-size:13px;color:var(--text2);margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item-time{font-size:11px;color:var(--text3);margin-top:6px}
+.item-actions{display:flex;align-items:flex-start;gap:6px;flex-shrink:0}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:modalIn .2s ease}
+.modal-lg{max-width:900px}
+@keyframes modalIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.modal-header h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--text)}
+.modal-header .mh-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:6px;flex-shrink:0}
+.modal-close:hover{color:var(--text);background:var(--surface2)}
+.modal-close svg{width:18px;height:18px}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+/* DETAIL VIEW */
+.dv-highlight{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.dv-highlight .avatar{flex-shrink:0}
+.dv-info{flex:1;min-width:0}
+.dv-name{font-size:15px;font-weight:700;color:var(--text)}
+.dv-sub{font-size:12px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dv-field{min-width:0}
+.dv-field.full{grid-column:1/-1}
+.dv-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:5px}
+.dv-value{font-size:14px;color:var(--text);font-weight:500;word-break:break-word}
+.dv-value.empty{color:var(--text3);font-weight:400;font-style:italic;font-size:13px}
+.dv-value a{color:var(--primary)}
+[data-theme="dark"] .dv-value a{color:var(--gold)}
+.dv-msg{white-space:pre-wrap;word-break:break-word;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:14px;line-height:1.65;color:var(--text);min-height:80px}
+.dv-divider{height:1px;background:var(--border);grid-column:1/-1;margin:4px 0}
+@media(max-width:640px){.dv-grid{grid-template-columns:1fr}.dv-field.full,.dv-divider{grid-column:1}}
+/* EDITOR */
+#blog-editor-wrap .ql-toolbar{border-radius:var(--radius-sm) var(--radius-sm) 0 0;border-color:var(--border);background:var(--surface2)}
+#blog-editor-wrap .ql-container{border-radius:0 0 var(--radius-sm) var(--radius-sm);border-color:var(--border);background:var(--surface);min-height:320px;font-size:15px;font-family:'Plus Jakarta Sans',sans-serif}
+#blog-editor-wrap .ql-editor{min-height:320px;line-height:1.7;color:var(--text)}
+[data-theme="dark"] #blog-editor-wrap .ql-toolbar{background:#1c2230;border-color:#30363d}
+[data-theme="dark"] #blog-editor-wrap .ql-container{background:#161b22;border-color:#30363d;color:#e6edf3}
+[data-theme="dark"] #blog-editor-wrap .ql-snow .ql-stroke{stroke:#8b949e}
+[data-theme="dark"] #blog-editor-wrap .ql-snow .ql-fill{fill:#8b949e}
+[data-theme="dark"] #blog-editor-wrap .ql-snow .ql-picker{color:#8b949e}
+[data-theme="dark"] #blog-editor-wrap .ql-snow .ql-picker-options{background:#161b22;border-color:#30363d}
+#img-preview{display:none;margin-top:8px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+#img-preview img{width:100%;max-height:160px;object-fit:cover;display:block}
+/* SEO */
+.seo-warning{background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px}
+.seo-warning.ok{background:#f0fdf4;border-color:#86efac}
+[data-theme="dark"] .seo-warning{background:#3d2e00;border-color:#78350f}
+[data-theme="dark"] .seo-warning.ok{background:#052e16;border-color:#166534}
+.seo-warning-title{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.seo-warning li{font-size:12px;color:var(--text2);margin-left:16px;margin-bottom:2px}
+.char-counter{display:flex;justify-content:space-between;font-size:11px;margin-top:4px;color:var(--text3)}
+.char-counter.ok{color:#16a34a}
+.char-counter.warn{color:#dc2626}
+.serp-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:16px}
+.serp-title{font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
+.serp-url{font-size:12px;color:#16a34a;margin-bottom:3px}
+.serp-h{font-size:15px;color:#1a0dab;font-weight:500;margin-bottom:3px}
+[data-theme="dark"] .serp-h{color:#60a5fa}
+.serp-desc{font-size:13px;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.editor-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;gap:2px}
+.editor-tab{padding:10px 16px;font-size:13px;font-weight:500;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;margin-bottom:-1px;transition:all .15s}
+.editor-tab:hover{color:var(--text)}
+.editor-tab.active{border-bottom-color:var(--primary);color:var(--primary);font-weight:600}
+.empty-state{text-align:center;padding:60px 20px}
+.empty-state svg{width:48px;height:48px;color:var(--text3);margin:0 auto 12px}
+.empty-state h3{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.empty-state p{font-size:13px;color:var(--text3)}
+#toast-container{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:13px;font-weight:500;pointer-events:auto;animation:toastIn .25s ease;min-width:260px}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.toast.success{border-left:3px solid #16a34a}
+.toast.error{border-left:3px solid #dc2626}
+.toast svg{width:16px;height:16px;flex-shrink:0}
+.toast.success svg{color:#16a34a}
+.toast.error svg{color:#dc2626}
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px}
+#confirm-overlay.open{display:flex}
+.confirm-box{background:var(--surface);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:380px;box-shadow:var(--shadow-lg)}
+.confirm-box h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.confirm-box p{font-size:13px;color:var(--text2);margin-bottom:20px}
+.confirm-actions{display:flex;gap:10px;justify-content:flex-end}
+.recent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.recent-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.recent-item:last-child{border-bottom:none}
+.recent-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.recent-dot.gold{background:var(--gold)}
+.recent-dot.gray{background:var(--text3)}
+.recent-dot.green{background:#16a34a}
+.recent-meta{flex:1;min-width:0}
+.recent-title{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.view-all{font-size:12px;color:var(--primary);font-weight:600;cursor:pointer}
+.view-all:hover{text-decoration:underline}
+[data-theme="dark"] .view-all{color:var(--gold)}
+.status-sel{font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 8px;background:var(--surface);color:var(--text);cursor:pointer;outline:none}
+.status-sel:focus{border-color:var(--primary)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.grid-2{grid-template-columns:1fr}}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop.open{display:block}
+  #main{margin-left:0}
+  #hamburger{display:flex}
+  #content{padding:16px}
+  .search-input{width:180px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .page-header{flex-direction:column;align-items:flex-start}
+  table{font-size:12px}
+  td,th{padding:10px 12px}
+}
+@media(max-width:420px){.stats-grid{grid-template-columns:1fr}}
+.page{display:none}
+.page.active{display:block}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-desc">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="login-page" style="display:none;min-height:100vh;background:linear-gradient(135deg,#0A2463 0%,#1a3a9e 50%,#0d3080 100%);align-items:center;justify-content:center;padding:20px;position:relative">
+  <div style="position:absolute;inset:0;opacity:.07;background-image:url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E\");pointer-events:none"></div>
+  <div style="position:relative;background:#fff;border-radius:20px;padding:40px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,.25)">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="width:56px;height:56px;background:#0A2463;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 20px rgba(10,36,99,.3)">
+        <span style="font-family:'Playfair Display',serif;font-weight:700;color:#D4AF37;font-size:18px">SD</span>
+      </div>
+      <h1 style="font-family:'Playfair Display',serif;font-size:22px;color:#0A2463;font-weight:700">SD Digital Hub</h1>
+      <p style="font-size:13px;color:#6b7280;margin-top:4px">Admin Panel — Sign in to continue</p>
+    </div>
+    <div id="login-error" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:#b91c1c;margin-bottom:16px"></div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:6px">Email Address</label>
+      <input id="login-email" type="email" placeholder="admin@sddigitalhub.com" style="width:100%;padding:11px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;outline:none;font-family:inherit;transition:border .15s" onfocus="this.style.borderColor='#0A2463'" onblur="this.style.borderColor='#e5e7eb'"/>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:6px">Password</label>
+      <div style="position:relative">
+        <input id="login-pass" type="password" placeholder="••••••••" style="width:100%;padding:11px 40px 11px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;outline:none;font-family:inherit;transition:border .15s" onfocus="this.style.borderColor='#0A2463'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button onclick="togglePass()" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9ca3af;cursor:pointer;display:flex;align-items:center">
+          <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <button id="login-btn" onclick="doLogin()" style="width:100%;padding:12px;background:#0A2463;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 4px 14px rgba(10,36,99,.3)">Sign In</button>
+    <p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:20px">© 2026 SD Digital Hub. All rights reserved.</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+  <aside id="sidebar">
+    <div class="logo-area">
+      <div class="logo-box">SD</div>
+      <div class="logo-text"><strong>SD Digital Hub</strong><span>Admin Panel</span></div>
+    </div>
+    <nav>
+      <button class="nav-item active" onclick="showPage('dashboard',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('blogs',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        Blog Posts
+      </button>
+      <button class="nav-item" onclick="showPage('contacts',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="m22 6-10 7L2 6"/></svg>
+        Contact Forms
+        <span class="nav-badge" id="nav-badge-contacts">0</span>
+      </button>
+      <button class="nav-item" onclick="showPage('callrequests',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2z"/></svg>
+        Call Requests
+        <span class="nav-badge" id="nav-badge-calls">0</span>
+      </button>
+      <button class="nav-item" onclick="showPage('subscribers',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Subscribers
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-email" id="sidebar-email">Loading...</div>
+      <button class="nav-item" onclick="toggleDark()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span id="dark-label">Dark Mode</span>
+      </button>
+      <button class="nav-item" onclick="doLogout()" style="color:rgba(248,113,113,.9)">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <div id="main">
+    <header id="topbar">
+      <button id="hamburger" onclick="openSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-right">
+        <span class="topbar-date" id="topbar-date"></span>
+        <button id="btn-dark" onclick="toggleDark()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span id="dark-label2">Dark</span>
+        </button>
+      </div>
+    </header>
+    <div id="content">
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-header"><div><h1>Dashboard</h1><p>Welcome back — here's your overview</p></div></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon blue"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div><div class="stat-value" id="s-blogs">—</div><div class="stat-label">Blog Posts</div><div class="stat-sub" id="s-blogs-sub"></div></div></div>
+          <div class="stat-card"><div class="stat-icon gold"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="m22 6-10 7L2 6"/></svg></div><div><div class="stat-value" id="s-contacts">—</div><div class="stat-label">Contact Forms</div><div class="stat-sub" id="s-contacts-sub"></div></div></div>
+          <div class="stat-card"><div class="stat-icon purple"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2z"/></svg></div><div><div class="stat-value" id="s-calls">—</div><div class="stat-label">Call Requests</div><div class="stat-sub" id="s-calls-sub"></div></div></div>
+          <div class="stat-card"><div class="stat-icon green"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div class="stat-value" id="s-subs">—</div><div class="stat-label">Subscribers</div></div></div>
+          <div class="stat-card"><div class="stat-icon rose"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div><div class="stat-value" id="s-views">—</div><div class="stat-label">Page Views</div></div></div>
+        </div>
+        <div class="recent-grid">
+          <div class="card"><div class="card-header"><h3>Recent Blogs</h3><span class="view-all" onclick="showPage('blogs',document.querySelectorAll('.nav-item')[1])">View all →</span></div><div class="card-body" id="dash-blogs-list"></div></div>
+          <div class="card"><div class="card-header"><h3>Recent Contacts</h3><span class="view-all" onclick="showPage('contacts',document.querySelectorAll('.nav-item')[2])">View all →</span></div><div class="card-body" id="dash-contacts-list"></div></div>
+          <div class="card"><div class="card-header"><h3>Recent Call Requests</h3><span class="view-all" onclick="showPage('callrequests',document.querySelectorAll('.nav-item')[3])">View all →</span></div><div class="card-body" id="dash-calls-list"></div></div>
+        </div>
+      </div>
+
+      <!-- BLOGS -->
+      <div id="page-blogs" class="page">
+        <div class="page-header">
+          <div><h1>Blog Posts</h1><p id="blogs-subtitle">Loading...</p></div>
+          <div class="page-actions">
+            <div class="export-wrap">
+              <button class="btn btn-outline" onclick="toggleExport('blogs-export')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></button>
+              <div class="export-dropdown" id="blogs-export"><div class="export-dropdown-header">Export Format</div><button class="export-option csv" onclick="exportData('blogs','csv');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download CSV</button><button class="export-option json" onclick="exportData('blogs','json');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download JSON</button></div>
+            </div>
+            <button class="btn btn-primary" onclick="openBlogEditor()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Post</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="search-wrap"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="search-input" id="blogs-search" placeholder="Search blogs..." oninput="renderBlogs()"/></div>
+          <div class="filter-chips" id="blogs-filter"><span class="chip active" onclick="setBlogFilter('all',this)">All</span><span class="chip" onclick="setBlogFilter('published',this)">Published</span><span class="chip" onclick="setBlogFilter('draft',this)">Draft</span></div>
+        </div>
+        <div class="card"><div class="table-wrap"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="blogs-tbody"></tbody></table><div id="blogs-empty" class="empty-state" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><h3>No blog posts</h3><p>Create your first post to get started.</p></div></div></div>
+      </div>
+
+      <!-- CONTACTS -->
+      <div id="page-contacts" class="page">
+        <div class="page-header">
+          <div><h1>Contact Forms</h1><p id="contacts-subtitle">Loading...</p></div>
+          <div class="page-actions">
+            <div class="export-wrap">
+              <button class="btn btn-outline" onclick="toggleExport('contacts-export')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></button>
+              <div class="export-dropdown" id="contacts-export"><div class="export-dropdown-header">Export Format</div><button class="export-option csv" onclick="exportData('contacts','csv');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download CSV</button><button class="export-option json" onclick="exportData('contacts','json');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download JSON</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;padding:12px 16px"><div class="search-wrap"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="search-input" id="contacts-search" placeholder="Search contacts..." oninput="renderContacts()"/></div></div>
+        <div class="card" id="contacts-list"><div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Loading...</div></div>
+        <div id="contacts-empty" class="empty-state" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/></svg><h3>No contact submissions</h3><p>Contact form submissions will appear here.</p></div>
+      </div>
+
+      <!-- CALL REQUESTS -->
+      <div id="page-callrequests" class="page">
+        <div class="page-header">
+          <div><h1>Call Requests</h1><p id="calls-subtitle">Loading...</p></div>
+          <div class="page-actions">
+            <div class="export-wrap">
+              <button class="btn btn-outline" onclick="toggleExport('calls-export')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></button>
+              <div class="export-dropdown" id="calls-export"><div class="export-dropdown-header">Export Format</div><button class="export-option csv" onclick="exportData('callrequests','csv');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download CSV</button><button class="export-option json" onclick="exportData('callrequests','json');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download JSON</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="search-wrap"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="search-input" id="calls-search" placeholder="Search call requests..." oninput="renderCalls()"/></div>
+          <div class="filter-chips" id="calls-filter"><span class="chip active" onclick="setCallFilter('all',this)">All</span><span class="chip" onclick="setCallFilter('new',this)">New</span><span class="chip" onclick="setCallFilter('pending',this)">Pending</span><span class="chip" onclick="setCallFilter('completed',this)">Completed</span><span class="chip" onclick="setCallFilter('cancelled',this)">Cancelled</span></div>
+        </div>
+        <div class="card" id="calls-list"><div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Loading...</div></div>
+        <div id="calls-empty" class="empty-state" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2z"/></svg><h3>No call requests</h3><p>Call back requests will appear here.</p></div>
+      </div>
+
+      <!-- SUBSCRIBERS -->
+      <div id="page-subscribers" class="page">
+        <div class="page-header">
+          <div><h1>Subscribers</h1><p id="subs-subtitle">Loading...</p></div>
+          <div class="page-actions">
+            <div class="export-wrap">
+              <button class="btn btn-outline" onclick="toggleExport('subs-export')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></button>
+              <div class="export-dropdown" id="subs-export"><div class="export-dropdown-header">Export Format</div><button class="export-option csv" onclick="exportData('subscribers','csv');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download CSV</button><button class="export-option json" onclick="exportData('subscribers','json');closeExports()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Download JSON</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;padding:12px 16px"><div class="search-wrap"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="search-input" id="subs-search" placeholder="Search subscribers..." oninput="renderSubs()"/></div></div>
+        <div class="card"><div class="table-wrap"><table><thead><tr><th>Email Address</th><th>Subscribed On</th><th>Action</th></tr></thead><tbody id="subs-tbody"></tbody></table><div id="subs-empty" class="empty-state" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><h3>No subscribers yet</h3><p>Newsletter subscribers will appear here.</p></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT DETAIL MODAL -->
+<div class="modal-overlay" id="contact-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>Contact Form Details</h3>
+        <div class="mh-sub" id="contact-modal-time"></div>
+      </div>
+      <button class="modal-close" onclick="closeContactModal()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="contact-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="contact-del-btn"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete</button>
+      <button class="btn btn-outline btn-sm" id="contact-read-btn">Mark as Read</button>
+      <button class="btn btn-primary btn-sm" onclick="closeContactModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALL REQUEST DETAIL MODAL -->
+<div class="modal-overlay" id="call-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>Call Request Details</h3>
+        <div class="mh-sub" id="call-modal-time"></div>
+      </div>
+      <button class="modal-close" onclick="closeCallModal()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="call-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="call-del-btn"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Delete</button>
+      <button class="btn btn-primary btn-sm" onclick="closeCallModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- BLOG EDITOR MODAL -->
+<div class="modal-overlay" id="blog-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="blog-modal-title">New Blog Post</h3>
+      <button class="modal-close" onclick="closeBlogEditor()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="editor-tabs">
+        <button class="editor-tab active" onclick="switchEditorTab('content',this)">Content</button>
+        <button class="editor-tab" onclick="switchEditorTab('seo',this)">SEO &amp; Meta</button>
+      </div>
+      <div id="etab-content">
+        <div class="grid-2">
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Blog Title *</label><input class="form-control" id="b-title" placeholder="Enter blog title..." oninput="autoSlug()"/></div>
+          <div class="form-group"><label class="form-label">URL Slug *</label><div class="slug-group"><span class="slug-prefix">/blog/</span><input class="form-control" id="b-slug" placeholder="post-url-slug" style="font-family:'JetBrains Mono',monospace"/></div></div>
+          <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="b-category"><option value="">Select category...</option><option>Business</option><option>Marketing</option><option>Technology</option><option>Design</option><option>SEO</option><option>Social Media</option><option>Tips &amp; Tricks</option><option>News</option><option>Other</option></select></div>
+          <div class="form-group"><label class="form-label">Featured Image URL</label><input class="form-control" id="b-img" placeholder="https://..." oninput="previewImg()"/><div id="img-preview"><img id="img-preview-img" src="" alt="preview"/></div></div>
+          <div class="form-group"><label class="form-label">Image Alt Text</label><input class="form-control" id="b-img-alt" placeholder="Describe the image..."/></div>
+          <div class="form-group" style="grid-column:1/-1;display:flex;align-items:center;gap:16px"><label class="form-label" style="margin:0">Status:</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="radio" name="b-status" value="draft" checked> Draft</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="radio" name="b-status" value="published"> Published</label></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Blog Content</label><div id="blog-editor-wrap"><div id="blog-editor"></div></div></div>
+        </div>
+      </div>
+      <div id="etab-seo" style="display:none">
+        <div id="seo-warnings-box"></div>
+        <div class="grid-2">
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">SEO Title</label><input class="form-control" id="b-seo-title" placeholder="Enter SEO title (30–60 chars)..." oninput="updateSEO()"/><div class="char-counter" id="seo-title-counter"><span>SEO Title length</span><span>0 / 60</span></div></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Meta Description</label><textarea class="form-control" id="b-meta-desc" rows="3" placeholder="Write a compelling meta description (120–160 chars)..." oninput="updateSEO()"></textarea><div class="char-counter" id="seo-desc-counter"><span>Meta Description length</span><span>0 / 160</span></div></div>
+          <div class="form-group"><label class="form-label">Focus Keyword</label><input class="form-control" id="b-keyword" placeholder="e.g. business website design"/></div>
+          <div class="form-group"><label class="form-label">Meta Robots</label><select class="form-control" id="b-robots"><option>index, follow</option><option>noindex, follow</option><option>index, nofollow</option><option>noindex, nofollow</option></select></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Canonical URL</label><input class="form-control" id="b-canonical" placeholder="https://sddigitalhub.in/blog/post-slug" style="font-family:'JetBrains Mono',monospace;font-size:13px"/></div>
+        </div>
+        <div class="serp-preview"><div class="serp-title">🔍 Search Preview</div><div class="serp-url" id="serp-url">https://sddigitalhub.in/blog/slug-here</div><div class="serp-h" id="serp-h">SEO Title will appear here</div><div class="serp-desc" id="serp-desc">Meta description will appear here...</div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeBlogEditor()">Cancel</button>
+      <button class="btn btn-outline" onclick="saveBlog('draft')">Save Draft</button>
+      <button class="btn btn-gold" onclick="saveBlog('published')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Publish</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIG — Your Supabase credentials
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://uihfadvfmxkikoncytae.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpaGZhZHZmbXhraWtvbmN5dGFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMjc3NTUsImV4cCI6MjA5NTYwMzc1NX0.mex-ucpBocgO3GyNfHtUVTFahCfb6Mc9Sa7I2OaRkG4'
+
+// ═══════════════════════════════════════════════════════════
+// ACTUAL TABLE COLUMN REFERENCE (from Supabase screenshots):
+//
+// blogs:         id, title, category, content, image, featured_image,
+//                image_alt, slug, status, seo_title, meta_description,
+//                focus_keyword, canonical_url, robots, meta_robots,
+//                created_at, updated_at
+//
+// contact_forms: id, name, phone, email, category, business_name,
+//                business_detail, message, timestamp, status, created_at
+//
+// call_requests: id, name, phone, email, business, timestamp,
+//                status, created_at
+//
+// subscribers:   id, email, subscribed_at, created_at
+//
+// page_views:    id, page, viewed_at
+// ═══════════════════════════════════════════════════════════
+
+const { createClient } = supabase
+let sb, quill, editingBlogId = null
+let allBlogs = [], allContacts = [], allCalls = [], allSubs = []
+let blogFilter = 'all', callFilter = 'all'
+let pageViewsCount = 0
+
+window.addEventListener('DOMContentLoaded', () => {
+  sb = createClient(SUPABASE_URL, SUPABASE_KEY)
+  topbarDate()
+  if (localStorage.getItem('sd-dark') === '1') {
+    document.documentElement.setAttribute('data-theme','dark')
+    document.getElementById('dark-label').textContent = 'Light Mode'
+    document.getElementById('dark-label2').textContent = 'Light'
+  }
+  checkSession()
+  document.addEventListener('click', e => { if (!e.target.closest('.export-wrap')) closeExports() })
+})
+
+function topbarDate() {
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'})
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSION & AUTH
+// ═══════════════════════════════════════════════════════════
+async function checkSession() {
+  const { data:{session} } = await sb.auth.getSession()
+  session ? showApp(session.user) : showLogin()
+  sb.auth.onAuthStateChange((_,s) => s ? showApp(s.user) : showLogin())
+}
+function showLogin() {
+  document.getElementById('login-page').style.display = 'flex'
+  document.getElementById('app').style.display = 'none'
+}
+function showApp(user) {
+  document.getElementById('login-page').style.display = 'none'
+  document.getElementById('app').style.display = 'flex'
+  document.getElementById('sidebar-email').textContent = user?.email || ''
+  loadAll()
+  initQuill()
+}
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim()
+  const pass = document.getElementById('login-pass').value
+  const btn = document.getElementById('login-btn')
+  if (!email || !pass) { showLoginError('Please fill in all fields'); return }
+  btn.textContent = 'Signing in...'; btn.disabled = true
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass })
+  btn.textContent = 'Sign In'; btn.disabled = false
+  if (error) showLoginError(error.message || 'Login failed')
+}
+function showLoginError(msg) { const e=document.getElementById('login-error'); e.textContent=msg; e.style.display='block' }
+async function doLogout() { await sb.auth.signOut(); toast('Signed out','success') }
+function togglePass() { const i=document.getElementById('login-pass'); i.type=i.type==='password'?'text':'password' }
+
+// ═══════════════════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════════════════
+function toggleDark() {
+  const d = document.documentElement.getAttribute('data-theme')==='dark'
+  document.documentElement.setAttribute('data-theme', d?'light':'dark')
+  localStorage.setItem('sd-dark', d?'0':'1')
+  document.getElementById('dark-label').textContent = d?'Dark Mode':'Light Mode'
+  document.getElementById('dark-label2').textContent = d?'Dark':'Light'
+}
+function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('open') }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open') }
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.getElementById('page-'+id).classList.add('active')
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  if (el) el.classList.add('active')
+  closeSidebar()
+  if (id==='dashboard') loadDash()
+  if (id==='blogs') renderBlogs()
+  if (id==='contacts') renderContacts()
+  if (id==='callrequests') renderCalls()
+  if (id==='subscribers') renderSubs()
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATA LOADING — using EXACT column names from your DB
+// ═══════════════════════════════════════════════════════════
+async function loadAll() {
+  try {
+    const [b, c, ca, s, pv] = await Promise.all([
+      sb.from('blogs').select('*').order('created_at',{ascending:false}),
+      sb.from('contact_forms').select('*').order('created_at',{ascending:false}),
+      sb.from('call_requests').select('*').order('created_at',{ascending:false}),
+      sb.from('subscribers').select('*').order('created_at',{ascending:false}),
+      sb.from('page_views').select('id',{count:'exact',head:true})
+    ])
+    if (b.error)  console.warn('blogs:',  b.error.message)
+    if (c.error)  console.warn('contacts:',c.error.message)
+    if (ca.error) console.warn('calls:',  ca.error.message)
+    if (s.error)  console.warn('subs:',   s.error.message)
+    allBlogs    = b.data  || []
+    allContacts = c.data  || []
+    allCalls    = ca.data || []
+    allSubs     = s.data  || []
+    pageViewsCount = pv.count || 0
+    loadDash()
+    updateNavBadges()
+  } catch(err) {
+    console.error('loadAll error:', err)
+    toast('Failed to load data','error')
+  }
+}
+
+function updateNavBadges() {
+  // "New" contacts = status is null, '', or 'new'
+  const unreadC   = allContacts.filter(c => isContactNew(c)).length
+  const unreadCal = allCalls.filter(c => (c.status||'new')==='new').length
+  const bc = document.getElementById('nav-badge-contacts')
+  const bca = document.getElementById('nav-badge-calls')
+  if (bc)  { bc.textContent=unreadC;   bc.style.display  = unreadC   ? 'inline':'none' }
+  if (bca) { bca.textContent=unreadCal; bca.style.display = unreadCal ? 'inline':'none' }
+}
+
+// contact_forms has NO is_read column — use status field
+function isContactNew(c) { return !c.status || c.status === 'new' || c.status === '' }
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function loadDash() {
+  const newC   = allContacts.filter(c=>isContactNew(c)).length
+  const newCal = allCalls.filter(c=>(c.status||'new')==='new').length
+  const pubB   = allBlogs.filter(b=>b.status==='published').length
+
+  setText('s-blogs',   allBlogs.length)
+  setText('s-contacts',allContacts.length)
+  setText('s-calls',   allCalls.length)
+  setText('s-subs',    allSubs.length)
+  setText('s-views',   pageViewsCount)
+  setText('s-blogs-sub',    pubB   ? pubB+' published'    : '')
+  setText('s-contacts-sub', newC   ? newC+' unread'       : 'All read')
+  setText('s-calls-sub',    newCal ? newCal+' new'        : '')
+
+  const bl = document.getElementById('dash-blogs-list')
+  bl.innerHTML = allBlogs.slice(0,5).map(b=>`
+    <div class="recent-item">
+      <div class="recent-dot ${b.status==='published'?'gold':'gray'}"></div>
+      <div class="recent-meta"><div class="recent-title">${esc(b.title||'Untitled')}</div><div class="recent-sub">${fmtDate(b.created_at)}</div></div>
+      <span class="badge ${b.status==='published'?'badge-green':'badge-gray'}">${b.status||'draft'}</span>
+    </div>`).join('') || noData()
+
+  const cl = document.getElementById('dash-contacts-list')
+  cl.innerHTML = allContacts.slice(0,5).map(c=>`
+    <div class="recent-item">
+      <div class="recent-dot ${isContactNew(c)?'gold':'gray'}"></div>
+      <div class="recent-meta"><div class="recent-title">${esc(c.name||'Unknown')}</div><div class="recent-sub">${esc(c.email||'')} · ${fmtDate(c.created_at)}</div></div>
+      ${isContactNew(c)?'<span class="badge badge-gold">New</span>':''}
+    </div>`).join('') || noData()
+
+  const cal = document.getElementById('dash-calls-list')
+  cal.innerHTML = allCalls.slice(0,5).map(c=>`
+    <div class="recent-item">
+      <div class="recent-dot ${c.status==='completed'?'green':c.status==='new'||!c.status?'gold':'gray'}"></div>
+      <div class="recent-meta">
+        <div class="recent-title">${esc(c.name||'Unknown')}</div>
+        <div class="recent-sub">${esc(c.phone||'')}${c.business?' · '+esc(c.business):''}</div>
+      </div>
+      <span class="badge ${statusBadge(c.status)}">${c.status||'new'}</span>
+    </div>`).join('') || noData()
+}
+function setText(id,v) { const e=document.getElementById(id); if(e) e.textContent=v }
+function noData() { return '<p style="color:var(--text3);font-size:13px;text-align:center;padding:8px 0">No records yet</p>' }
+
+// ═══════════════════════════════════════════════════════════
+// BLOGS — columns: id, title, category, content, image,
+//  featured_image, image_alt, slug, status, seo_title,
+//  meta_description, focus_keyword, canonical_url,
+//  meta_robots, created_at, updated_at
+// ═══════════════════════════════════════════════════════════
+function setBlogFilter(v,el) {
+  blogFilter=v
+  document.querySelectorAll('#blogs-filter .chip').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active'); renderBlogs()
+}
+function renderBlogs() {
+  const q=(document.getElementById('blogs-search')?.value||'').toLowerCase()
+  const data=allBlogs.filter(b=>{
+    const sf=blogFilter==='all'||b.status===blogFilter
+    const sq=!q||[b.title,b.slug,b.category].some(f=>f?.toLowerCase().includes(q))
+    return sf&&sq
+  })
+  setText('blogs-subtitle',`${allBlogs.length} total · ${allBlogs.filter(b=>b.status==='published').length} published`)
+  const tbody=document.getElementById('blogs-tbody')
+  const empty=document.getElementById('blogs-empty')
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return }
+  empty.style.display='none'
+  tbody.innerHTML=data.map(b=>`
+    <tr>
+      <td><div style="font-weight:600">${esc(b.title||'Untitled')}</div><div class="td-sub">/blog/${esc(b.slug||'')}</div></td>
+      <td>${b.category?`<span class="badge badge-blue">${esc(b.category)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td><span class="badge ${b.status==='published'?'badge-green':'badge-gray'}">${b.status||'draft'}</span></td>
+      <td style="color:var(--text2);font-size:12px">${fmtDate(b.created_at)}</td>
+      <td><div class="td-actions">
+        <button class="btn-icon" onclick="editBlog(${b.id})" title="Edit">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon danger" onclick="confirmDelete(()=>deleteBlog(${b.id}),'Delete Blog Post','This blog post will be permanently deleted.')" title="Delete">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div></td>
+    </tr>`).join('')
+}
+
+function initQuill() {
+  if (quill) return
+  quill = new Quill('#blog-editor', {
+    theme: 'snow',
+    placeholder: 'Start writing your blog post...',
+    modules: {
+      toolbar: {
+        container: [
+          [{header:[1,2,3,4,5,6,false]}],
+          ['bold','italic','underline','strike'],
+          [{align:[]}],
+          [{color:[]},{background:[]}],
+          [{list:'ordered'},{list:'bullet'}],
+          ['blockquote','link','image','video'],
+          ['clean']
+        ],
+        handlers: {
+          video: function() {
+            let url = prompt('Enter YouTube URL or video embed URL:')
+            if (!url) return
+            url = url.trim()
+            const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+            if (yt) url = 'https://www.youtube.com/embed/' + yt[1]
+            const range = this.quill.getSelection(true)
+            this.quill.insertEmbed(range.index, 'video', url)
+            this.quill.setSelection(range.index + 1)
+          }
+        }
+      }
+    }
+  })
+}
+
+function openBlogEditor() {
+  editingBlogId = null
+  document.getElementById('blog-modal-title').textContent = 'New Blog Post'
+  clearBlogForm()
+  document.getElementById('blog-modal').classList.add('open')
+  switchEditorTab('content', document.querySelector('.editor-tab'))
+}
+
+async function editBlog(id) {
+  // FIX: use == (not ===) to handle number/string type mismatch from onclick
+  const b = allBlogs.find(x => x.id == id)
+  if (!b) { toast('Blog not found','error'); return }
+  editingBlogId = b.id  // use the actual id from the object
+  document.getElementById('blog-modal-title').textContent = 'Edit Blog Post'
+  document.getElementById('b-title').value   = b.title          || ''
+  document.getElementById('b-slug').value    = b.slug           || ''
+  document.getElementById('b-category').value= b.category       || ''
+  document.getElementById('b-img').value     = b.featured_image || b.image || ''
+  document.getElementById('b-img-alt').value = b.image_alt      || ''
+  // SEO fields
+  document.getElementById('b-seo-title').value = b.seo_title         || ''
+  document.getElementById('b-meta-desc').value = b.meta_description  || ''
+  document.getElementById('b-keyword').value   = b.focus_keyword     || ''
+  document.getElementById('b-canonical').value = b.canonical_url     || ''
+  document.getElementById('b-robots').value    = b.meta_robots       || 'index, follow'
+  const sr = document.querySelector(`input[name="b-status"][value="${b.status||'draft'}"]`)
+  if (sr) sr.checked = true
+  if (b.featured_image || b.image) previewImg()
+  setTimeout(() => { if (quill) quill.root.innerHTML = b.content || '' }, 100)
+  updateSEO()
+  document.getElementById('blog-modal').classList.add('open')
+  switchEditorTab('content', document.querySelector('.editor-tab'))
+}
+
+function clearBlogForm() {
+  ;['b-title','b-slug','b-img','b-img-alt','b-seo-title','b-meta-desc','b-keyword','b-canonical'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.value=''
+  })
+  document.getElementById('b-category').value = ''
+  document.getElementById('b-robots').value = 'index, follow'
+  const dr = document.querySelector('input[name="b-status"][value="draft"]')
+  if (dr) dr.checked = true
+  document.getElementById('img-preview').style.display = 'none'
+  if (quill) quill.setText('')
+  updateSEO()
+}
+
+function closeBlogEditor() { document.getElementById('blog-modal').classList.remove('open'); editingBlogId=null }
+
+async function saveBlog(statusOverride) {
+  const title = document.getElementById('b-title').value.trim()
+  const slug  = document.getElementById('b-slug').value.trim()
+  if (!title) { toast('Title is required','error'); return }
+  if (!slug)  { toast('Slug is required','error');  return }
+  const status = statusOverride || document.querySelector('input[name="b-status"]:checked')?.value || 'draft'
+  const payload = {
+    title, slug, status,
+    category:         document.getElementById('b-category').value  || null,
+    featured_image:   document.getElementById('b-img').value       || null,
+    image_alt:        document.getElementById('b-img-alt').value   || null,
+    content:          quill ? quill.root.innerHTML : '',
+    seo_title:        document.getElementById('b-seo-title').value || null,
+    meta_description: document.getElementById('b-meta-desc').value || null,
+    focus_keyword:    document.getElementById('b-keyword').value   || null,
+    canonical_url:    document.getElementById('b-canonical').value || null,
+    meta_robots:      document.getElementById('b-robots').value    || 'index, follow',
+    updated_at:       new Date().toISOString()
+  }
+  let error
+  if (editingBlogId) {
+    ;({ error } = await sb.from('blogs').update(payload).eq('id', editingBlogId))
+  } else {
+    payload.created_at = new Date().toISOString()
+    ;({ error } = await sb.from('blogs').insert([payload]))
+  }
+  if (error) { toast(error.message || 'Save failed','error'); return }
+  toast(editingBlogId ? 'Blog updated!' : 'Blog created!','success')
+  closeBlogEditor()
+  await loadAll()
+  renderBlogs()
+}
+
+async function deleteBlog(id) {
+  const { error } = await sb.from('blogs').delete().eq('id', id)
+  if (error) { toast('Delete failed: '+error.message,'error'); return }
+  toast('Blog deleted','success')
+  allBlogs = allBlogs.filter(b => b.id != id)
+  renderBlogs(); loadDash()
+}
+
+function autoSlug() {
+  if (editingBlogId) return
+  document.getElementById('b-slug').value = slugify(document.getElementById('b-title').value)
+}
+function previewImg() {
+  const url=(document.getElementById('b-img').value||'').trim()
+  const wrap=document.getElementById('img-preview')
+  const img=document.getElementById('img-preview-img')
+  if (url) { img.src=url; wrap.style.display='block'; img.onerror=()=>wrap.style.display='none' }
+  else wrap.style.display='none'
+}
+function switchEditorTab(tab, el) {
+  document.querySelectorAll('.editor-tab').forEach(t=>t.classList.remove('active'))
+  if (el) el.classList.add('active')
+  document.getElementById('etab-content').style.display = tab==='content'?'block':'none'
+  document.getElementById('etab-seo').style.display     = tab==='seo'    ?'block':'none'
+  if (tab==='seo') updateSEO()
+}
+function updateSEO() {
+  const t=document.getElementById('b-seo-title')?.value||''
+  const d=document.getElementById('b-meta-desc')?.value||''
+  const s=document.getElementById('b-slug')?.value||''
+  const tc=document.getElementById('seo-title-counter')
+  if (tc) { tc.children[1].textContent=`${t.length} / 60`; tc.className='char-counter '+(t.length>60?'warn':t.length>=30?'ok':'') }
+  const dc=document.getElementById('seo-desc-counter')
+  if (dc) { dc.children[1].textContent=`${d.length} / 160`; dc.className='char-counter '+(d.length>160?'warn':d.length>=120?'ok':'') }
+  const su=document.getElementById('serp-url'); if(su) su.textContent=`https://sddigitalhub.in/blog/${s||'slug-here'}`
+  const sh=document.getElementById('serp-h');   if(sh) sh.textContent=t||'SEO Title will appear here'
+  const sd=document.getElementById('serp-desc');if(sd) sd.textContent=d||'Meta description will appear here...'
+  const w=[]; if(!t) w.push('SEO Title missing'); else if(t.length<30) w.push('Too short (min 30)'); else if(t.length>60) w.push('Too long (max 60)')
+  if(!d) w.push('Meta Description missing'); else if(d.length<120) w.push('Too short (min 120)'); else if(d.length>160) w.push('Too long (max 160)')
+  const box=document.getElementById('seo-warnings-box'); if(!box) return
+  box.innerHTML = !w.length
+    ? '<div class="seo-warning ok"><div class="seo-warning-title">✅ SEO looks great!</div></div>'
+    : `<div class="seo-warning"><div class="seo-warning-title">⚠️ SEO Issues (${w.length})</div><ul>${w.map(x=>`<li>${x}</li>`).join('')}</ul></div>`
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONTACTS — columns: id, name, phone, email, category,
+//  business_name, business_detail, message, timestamp,
+//  status, created_at
+//  NOTE: NO is_read column — use status field instead
+// ═══════════════════════════════════════════════════════════
+function renderContacts() {
+  const q=(document.getElementById('contacts-search')?.value||'').toLowerCase()
+  const data=allContacts.filter(c=>!q||[c.name,c.email,c.phone,c.category,c.business_name,c.message].some(f=>f?.toLowerCase().includes(q)))
+  const newCount=allContacts.filter(c=>isContactNew(c)).length
+  setText('contacts-subtitle',`${allContacts.length} total${newCount>0?` · ${newCount} unread`:''}`)
+  const wrap=document.getElementById('contacts-list')
+  const empty=document.getElementById('contacts-empty')
+  if (!data.length) { wrap.innerHTML=''; empty.style.display='block'; return }
+  empty.style.display='none'
+  wrap.innerHTML=data.map(c=>`
+    <div class="item-row ${isContactNew(c)?'unread':''}">
+      <div class="avatar blue">${(c.name?.[0]||'?').toUpperCase()}</div>
+      <div class="item-info">
+        <div class="item-name">
+          ${esc(c.name||'Unknown')}
+          ${isContactNew(c)?'<span class="badge badge-gold">New</span>':''}
+          ${c.category?`<span class="badge badge-blue">${esc(c.category)}</span>`:''}
+        </div>
+        <div class="item-meta">
+          ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--primary)">${esc(c.email)}</a>`:''}
+          ${c.phone?` · <span>${esc(c.phone)}</span>`:''}
+        </div>
+        ${c.business_name?`<div style="font-size:12px;color:var(--text2);margin-top:3px">🏢 ${esc(c.business_name)}</div>`:''}
+        <div class="item-msg">${esc(c.message||'')}</div>
+        <div class="item-time">${fmtDateTime(c.timestamp||c.created_at)}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn-icon view" onclick="viewContact(${c.id})" title="View full details">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="btn-icon" onclick="toggleContactStatus(${c.id})" title="${isContactNew(c)?'Mark as Read':'Mark as New'}">
+          ${isContactNew(c)
+            ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
+        </button>
+        <button class="btn-icon danger" onclick="confirmDelete(()=>deleteContact(${c.id}),'Delete Contact','This contact submission will be permanently deleted.')" title="Delete">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </div>`).join('')
+}
+
+function viewContact(id) {
+  const c = allContacts.find(x => x.id == id)
+  if (!c) return
+  setText('contact-modal-time', 'Submitted ' + fmtDateTime(c.timestamp || c.created_at))
+  document.getElementById('contact-modal-body').innerHTML = `
+    <div class="dv-highlight">
+      <div class="avatar blue" style="width:44px;height:44px;font-size:16px">${(c.name?.[0]||'?').toUpperCase()}</div>
+      <div class="dv-info">
+        <div class="dv-name">${esc(c.name||'Unknown')}</div>
+        <div class="dv-sub">${esc(c.email||'')} ${c.phone?'· '+esc(c.phone):''}</div>
+      </div>
+      <span class="badge ${isContactNew(c)?'badge-gold':'badge-green'}">${isContactNew(c)?'Unread':'Read'}</span>
+    </div>
+    <div class="dv-grid">
+      <div class="dv-field">
+        <div class="dv-label">Full Name</div>
+        <div class="dv-value">${esc(c.name||'—')}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Phone Number</div>
+        <div class="dv-value">${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:'<span class="empty">Not provided</span>'}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Email Address</div>
+        <div class="dv-value">${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'<span class="empty">Not provided</span>'}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Category</div>
+        <div class="dv-value ${c.category?'':'empty'}">${esc(c.category||'Not specified')}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Business Name</div>
+        <div class="dv-value ${c.business_name?'':'empty'}">${esc(c.business_name||'Not provided')}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Submitted</div>
+        <div class="dv-value">${fmtDateTime(c.timestamp||c.created_at)}</div>
+      </div>
+      ${c.business_detail?`
+      <div class="dv-field full">
+        <div class="dv-label">Business Detail</div>
+        <div class="dv-value">${esc(c.business_detail)}</div>
+      </div>`:''}
+      <div class="dv-divider"></div>
+      <div class="dv-field full">
+        <div class="dv-label">Message</div>
+        <div class="dv-msg">${esc(c.message||'No message provided.')}</div>
+      </div>
+    </div>`
+
+  const readBtn = document.getElementById('contact-read-btn')
+  readBtn.textContent = isContactNew(c) ? 'Mark as Read' : 'Mark as Unread'
+  readBtn.onclick = () => { toggleContactStatus(c.id); closeContactModal() }
+
+  document.getElementById('contact-del-btn').onclick = () => {
+    closeContactModal()
+    confirmDelete(()=>deleteContact(c.id), 'Delete Contact', 'This contact will be permanently deleted.')
+  }
+  document.getElementById('contact-modal').classList.add('open')
+}
+function closeContactModal() { document.getElementById('contact-modal').classList.remove('open') }
+
+async function toggleContactStatus(id) {
+  // contact_forms uses 'status' column (no is_read) — toggle 'new' <-> 'read'
+  const c = allContacts.find(x => x.id == id)
+  if (!c) return
+  const newStatus = isContactNew(c) ? 'read' : 'new'
+  const { error } = await sb.from('contact_forms').update({ status: newStatus }).eq('id', id)
+  if (error) { toast('Update failed: '+error.message,'error'); return }
+  allContacts = allContacts.map(x => x.id == id ? {...x, status:newStatus} : x)
+  renderContacts(); loadDash(); updateNavBadges()
+  toast(newStatus==='read' ? 'Marked as read' : 'Marked as unread','success')
+}
+
+async function deleteContact(id) {
+  const { error } = await sb.from('contact_forms').delete().eq('id', id)
+  if (error) { toast('Delete failed: '+error.message,'error'); return }
+  toast('Contact deleted','success')
+  allContacts = allContacts.filter(c => c.id != id)
+  renderContacts(); loadDash(); updateNavBadges()
+}
+
+// ═══════════════════════════════════════════════════════════
+// CALL REQUESTS — columns: id, name, phone, email,
+//  business, timestamp, status, created_at
+//  NOTE: NO is_read, NO service, NO preferred_time, NO message
+// ═══════════════════════════════════════════════════════════
+function setCallFilter(v,el) {
+  callFilter=v
+  document.querySelectorAll('#calls-filter .chip').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active'); renderCalls()
+}
+function renderCalls() {
+  const q=(document.getElementById('calls-search')?.value||'').toLowerCase()
+  const data=allCalls.filter(c=>{
+    const sf=callFilter==='all'||(c.status||'new')===callFilter
+    const sq=!q||[c.name,c.email,c.phone,c.business].some(f=>f?.toLowerCase().includes(q))
+    return sf&&sq
+  })
+  const newCount=allCalls.filter(c=>(c.status||'new')==='new').length
+  setText('calls-subtitle',`${allCalls.length} total${newCount>0?` · ${newCount} new`:''}`)
+  const wrap=document.getElementById('calls-list')
+  const empty=document.getElementById('calls-empty')
+  if (!data.length) { wrap.innerHTML=''; empty.style.display='block'; return }
+  empty.style.display='none'
+  wrap.innerHTML=data.map(c=>`
+    <div class="item-row ${(c.status||'new')==='new'?'unread':''}">
+      <div class="avatar purple">${(c.name?.[0]||'?').toUpperCase()}</div>
+      <div class="item-info">
+        <div class="item-name">
+          ${esc(c.name||'Unknown')}
+          ${(c.status||'new')==='new'?'<span class="badge badge-gold">New</span>':''}
+          <span class="badge ${statusBadge(c.status)}">${c.status||'new'}</span>
+        </div>
+        <div class="item-meta">
+          ${c.phone?`<a href="tel:${esc(c.phone)}" style="color:var(--text2)">${esc(c.phone)}</a>`:'No phone'}
+          ${c.email?` · ${esc(c.email)}`:''}
+        </div>
+        ${c.business?`<div style="font-size:13px;margin-top:4px;color:var(--text)">🏢 <strong>${esc(c.business)}</strong></div>`:''}
+        <div class="item-time">${fmtDateTime(c.timestamp||c.created_at)}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn-icon view" onclick="viewCall(${c.id})" title="View full details">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <select class="status-sel" onchange="updateCallStatus(${c.id},this.value)">
+          <option value="new"       ${(c.status||'new')==='new'      ?'selected':''}>New</option>
+          <option value="pending"   ${c.status==='pending'   ?'selected':''}>Pending</option>
+          <option value="completed" ${c.status==='completed' ?'selected':''}>Completed</option>
+          <option value="cancelled" ${c.status==='cancelled' ?'selected':''}>Cancelled</option>
+        </select>
+        <button class="btn-icon danger" onclick="confirmDelete(()=>deleteCall(${c.id}),'Delete Call Request','This call request will be permanently deleted.')" title="Delete">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </div>`).join('')
+}
+
+function viewCall(id) {
+  const c = allCalls.find(x => x.id == id)
+  if (!c) return
+  setText('call-modal-time', 'Submitted ' + fmtDateTime(c.timestamp || c.created_at))
+  document.getElementById('call-modal-body').innerHTML = `
+    <div class="dv-highlight">
+      <div class="avatar purple" style="width:44px;height:44px;font-size:16px">${(c.name?.[0]||'?').toUpperCase()}</div>
+      <div class="dv-info">
+        <div class="dv-name">${esc(c.name||'Unknown')}</div>
+        <div class="dv-sub">${esc(c.phone||'No phone')} ${c.email?'· '+esc(c.email):''}</div>
+      </div>
+      <span class="badge ${statusBadge(c.status)} " id="call-view-badge">${c.status||'new'}</span>
+    </div>
+    <div class="dv-grid">
+      <div class="dv-field">
+        <div class="dv-label">Full Name</div>
+        <div class="dv-value">${esc(c.name||'—')}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Phone Number</div>
+        <div class="dv-value">${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:'<span class="empty">Not provided</span>'}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Email Address</div>
+        <div class="dv-value">${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'<span class="empty">Not provided</span>'}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Business / Service</div>
+        <div class="dv-value ${c.business?'':'empty'}">${esc(c.business||'Not specified')}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Submitted</div>
+        <div class="dv-value">${fmtDateTime(c.timestamp||c.created_at)}</div>
+      </div>
+      <div class="dv-field">
+        <div class="dv-label">Update Status</div>
+        <div class="dv-value">
+          <select class="status-sel" style="width:100%" onchange="updateCallStatusFromModal(${c.id},this.value)">
+            <option value="new"       ${(c.status||'new')==='new'      ?'selected':''}>New</option>
+            <option value="pending"   ${c.status==='pending'   ?'selected':''}>Pending</option>
+            <option value="completed" ${c.status==='completed' ?'selected':''}>Completed</option>
+            <option value="cancelled" ${c.status==='cancelled' ?'selected':''}>Cancelled</option>
+          </select>
+        </div>
+      </div>
+    </div>`
+
+  document.getElementById('call-del-btn').onclick = () => {
+    closeCallModal()
+    confirmDelete(()=>deleteCall(c.id), 'Delete Call Request', 'This call request will be permanently deleted.')
+  }
+  document.getElementById('call-modal').classList.add('open')
+}
+function closeCallModal() { document.getElementById('call-modal').classList.remove('open') }
+
+async function updateCallStatusFromModal(id, status) {
+  await updateCallStatus(id, status)
+  const badge = document.getElementById('call-view-badge')
+  if (badge) { badge.className = 'badge ' + statusBadge(status); badge.textContent = status }
+}
+
+async function updateCallStatus(id, status) {
+  const { error } = await sb.from('call_requests').update({ status }).eq('id', id)
+  if (error) { toast('Update failed: '+error.message,'error'); return }
+  allCalls = allCalls.map(c => c.id == id ? {...c, status} : c)
+  toast('Status updated to: '+status,'success')
+  renderCalls(); loadDash(); updateNavBadges()
+}
+
+async function deleteCall(id) {
+  const { error } = await sb.from('call_requests').delete().eq('id', id)
+  if (error) { toast('Delete failed: '+error.message,'error'); return }
+  toast('Call request deleted','success')
+  allCalls = allCalls.filter(c => c.id != id)
+  renderCalls(); loadDash(); updateNavBadges()
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUBSCRIBERS — columns: id, email, subscribed_at, created_at
+//  NOTE: NO name column, NO status column
+// ═══════════════════════════════════════════════════════════
+function renderSubs() {
+  const q=(document.getElementById('subs-search')?.value||'').toLowerCase()
+  const data=allSubs.filter(s=>!q||s.email?.toLowerCase().includes(q))
+  setText('subs-subtitle',`${allSubs.length} total subscribers`)
+  const tbody=document.getElementById('subs-tbody')
+  const empty=document.getElementById('subs-empty')
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return }
+  empty.style.display='none'
+  tbody.innerHTML=data.map(s=>`
+    <tr>
+      <td style="font-weight:500">${esc(s.email||'—')}</td>
+      <td style="color:var(--text2);font-size:12px">${fmtDate(s.subscribed_at||s.created_at)}</td>
+      <td>
+        <button class="btn-icon danger" onclick="confirmDelete(()=>deleteSub(${s.id}),'Remove Subscriber','${esc(s.email||'')} will be removed from subscribers.')" title="Remove">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </td>
+    </tr>`).join('')
+}
+
+async function deleteSub(id) {
+  const { error } = await sb.from('subscribers').delete().eq('id', id)
+  if (error) { toast('Delete failed: '+error.message,'error'); return }
+  toast('Subscriber removed','success')
+  allSubs = allSubs.filter(s => s.id != id)
+  renderSubs(); loadDash()
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════
+const EXPORT_CONFIG = {
+  blogs: {
+    data: ()=>allBlogs,
+    cols: ['id','title','slug','category','status','featured_image','image_alt','seo_title','meta_description','created_at','updated_at']
+  },
+  contacts: {
+    data: ()=>allContacts,
+    // exact columns from contact_forms table
+    cols: ['id','name','phone','email','category','business_name','business_detail','message','timestamp','status','created_at']
+  },
+  callrequests: {
+    data: ()=>allCalls,
+    // exact columns from call_requests table
+    cols: ['id','name','phone','email','business','timestamp','status','created_at']
+  },
+  subscribers: {
+    data: ()=>allSubs,
+    // exact columns from subscribers table
+    cols: ['id','email','subscribed_at','created_at']
+  }
+}
+
+function exportData(section, format) {
+  const cfg=EXPORT_CONFIG[section]; if(!cfg) return
+  const data=cfg.data()
+  if (!data.length) { toast('No data to export','error'); return }
+  const date=new Date().toISOString().slice(0,10)
+  const fname=`${section}_${date}`
+  if (format==='csv') {
+    const rows=[cfg.cols.join(','),...data.map(row=>cfg.cols.map(k=>`"${String(row[k]??'').replace(/"/g,'""')}"`).join(','))]
+    dlFile(rows.join('\n'),`${fname}.csv`,'text/csv;charset=utf-8;')
+  } else {
+    dlFile(JSON.stringify(data,null,2),`${fname}.json`,'application/json')
+  }
+  toast(`Exported ${data.length} records as ${format.toUpperCase()}`,'success')
+}
+function dlFile(content, filename, mime) {
+  const blob=new Blob([content],{type:mime})
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement('a'); a.href=url; a.download=filename
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════
+function toggleExport(id) {
+  const el=document.getElementById(id)
+  const was=el.classList.contains('open'); closeExports(); if(!was) el.classList.add('open')
+}
+function closeExports() { document.querySelectorAll('.export-dropdown').forEach(d=>d.classList.remove('open')) }
+
+let confirmCb=null
+function confirmDelete(cb, title, desc) {
+  confirmCb=cb
+  document.getElementById('confirm-title').textContent=title||'Are you sure?'
+  document.getElementById('confirm-desc').textContent=desc||'This cannot be undone.'
+  document.getElementById('confirm-ok').onclick=()=>{ closeConfirm(); confirmCb&&confirmCb() }
+  document.getElementById('confirm-overlay').classList.add('open')
+}
+function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); confirmCb=null }
+
+function toast(msg, type='success') {
+  const el=document.createElement('div'); el.className=`toast ${type}`
+  const icon=type==='success'
+    ?'<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>'
+    :'<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+  el.innerHTML=icon+`<span>${msg}</span>`
+  document.getElementById('toast-container').appendChild(el)
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(16px)'; setTimeout(()=>el.remove(),300) },3500)
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function slugify(s) { return String(s||'').toLowerCase().trim().replace(/[^\w\s-]/g,'').replace(/[\s_]+/g,'-').replace(/^-+|-+$/g,'') }
+function fmtDate(d) { try { return d?new Date(d).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'—' } catch{return '—'} }
+function fmtDateTime(d) { try { return d?new Date(d).toLocaleString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—' } catch{return '—'} }
+function statusBadge(s) { return {new:'badge-blue',pending:'badge-yellow',completed:'badge-green',cancelled:'badge-red'}[s||'new']||'badge-gray' }
+</script>
+</body>
+</html>
